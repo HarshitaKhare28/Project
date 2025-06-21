@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useTimer from '../hooks/useTimer2';
-// import './InterestAptitudeTest.css';
+import useTimer from '../hooks/useTimer2'; 
+
 
 const InterestAptitudeTest = () => {
     const [questions, setQuestions] = useState([]);
@@ -9,27 +9,24 @@ const InterestAptitudeTest = () => {
     const [selectedOptions, setSelectedOptions] = useState({});
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [quesnum, setQuesNum] = useState(0);
-    const [totalMinutes, setTotalMinutes] = useState(1);
+    const [totalMinutes, setTotalMinutes] = useState(1); 
+
     const navigate = useNavigate();
 
-    // const totalMinutes = 10;
-    // const { minutes, seconds, isTimeUp } = useTimer(totalMinutes);
     const { minutes, seconds, isTimeUp, resetTimer, startTimer } = useTimer(totalMinutes);
 
-    // Fetch questions from API when the component mounts
     useEffect(() => {
         const fetchQuestions = async () => {
             try {
-                const response = await fetch('http://localhost:7000/api/questions'); // Fetch questions from API
+                const response = await fetch('http://localhost:7000/api/questions');
                 const data = await response.json();
-                console.log(data);
                 setQuestions(data);
-                // setTotalMinutes(questions.length)
-                if (data && data.length > 0) {
-                    const calculatedMinutes = data.length; // 1 minute per question
-                    setTotalMinutes(calculatedMinutes);
-                }
 
+                if (data && data.length > 0) {
+                    const storedTimer = localStorage.getItem('testTimer');
+                    const minutesFromStorage = storedTimer ? parseInt(storedTimer) : data.length; 
+                    setTotalMinutes(minutesFromStorage);
+                }
             } catch (error) {
                 console.error('Error fetching questions:', error);
             }
@@ -37,15 +34,13 @@ const InterestAptitudeTest = () => {
 
         fetchQuestions();
     }, []);
+
     useEffect(() => {
         if (totalMinutes > 0) {
-            resetTimer(); // Reset timer whenever total minutes change
-            startTimer(); // Start the timer
+            resetTimer();
+            startTimer();
         }
     }, [totalMinutes]);
-    // useEffect(() => {
-    //     setTotalMinutes(questions.length)
-    // }, [questions])
 
     useEffect(() => {
         if (isTimeUp) {
@@ -70,10 +65,11 @@ const InterestAptitudeTest = () => {
 
     useEffect(() => {
         setQuesNum(quesnum + 1);
-
-    }, [currentQuestion])
+    }, [currentQuestion]);
 
     const handleSubmit = () => {
+        if (isSubmitted) return;
+
         let score = 0;
         let correctAnswers = 0;
 
@@ -85,7 +81,15 @@ const InterestAptitudeTest = () => {
         });
 
         setIsSubmitted(true);
-        navigate('/result2', { state: { questions, selectedOptions, score, correctAnswers, totalQuestions: questions.length } });
+        navigate('/result2', {
+            state: {
+                questions,
+                selectedOptions,
+                score,
+                correctAnswers,
+                totalQuestions: questions.length,
+            },
+        });
     };
 
     if (!questions.length) {
@@ -99,6 +103,9 @@ const InterestAptitudeTest = () => {
                     <div>
                         <h1 className="text-3xl font-bold text-blue-700">Interest | Aptitude Test</h1>
                         <p className="mt-4 text-lg text-gray-700">{currentQuestion.text}</p>
+                        <p className="text-sm text-gray-600 mt-2">
+                            Total Time: {totalMinutes} minute{totalMinutes > 1 ? 's' : ''}
+                        </p>
                     </div>
                     <div className="text-lg text-gray-700">
                         <div className="inline h-6 w-6 text-blue-700 mr-2">
@@ -110,7 +117,10 @@ const InterestAptitudeTest = () => {
                     <div className="flex-1 overflow-y-auto">
                         <div className="space-y-4">
                             {currentQuestion.options.map((option, index) => (
-                                <label key={index} className="block p-4 border rounded-lg cursor-pointer hover:bg-blue-50">
+                                <label
+                                    key={index}
+                                    className="block p-4 border rounded-lg cursor-pointer hover:bg-blue-50"
+                                >
                                     <input
                                         type="radio"
                                         name={`question-${currentQuestion.id}`}
@@ -124,12 +134,14 @@ const InterestAptitudeTest = () => {
                             ))}
                         </div>
                         <div className="flex space-x-4">
-                            <button
-                                onClick={handleNextClick}
-                                className="mt-6 bg-blue-600 text-white py-2 px-4 rounded w-full hover:bg-blue-700"
-                            >
-                                Next
-                            </button>
+                            {currentQuestionIndex < questions.length - 1 && (
+                                <button
+                                    onClick={handleNextClick}
+                                    className="mt-6 bg-blue-600 text-white py-2 px-4 rounded w-full hover:bg-blue-700"
+                                >
+                                    Next
+                                </button>
+                            )}
                             {currentQuestionIndex === questions.length - 1 && (
                                 <button
                                     onClick={handleSubmit}
@@ -141,9 +153,9 @@ const InterestAptitudeTest = () => {
                         </div>
                     </div>
                     <div className="flex-none">
-                        <div className="text-lg text-gray-700 mb-4">Question Lists</div>
+                        <div className="text-lg text-gray-700 mb-4">Question List</div>
                         <div className="grid grid-cols-5 gap-2">
-                            {Array.from({ length: questions.length }, (_, i) => (
+                            {questions.map((_, i) => (
                                 <button
                                     key={i}
                                     className={`p-2 rounded-full border ${currentQuestionIndex === i ? 'bg-blue-500 text-white' : 'bg-white'
