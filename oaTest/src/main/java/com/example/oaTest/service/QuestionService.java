@@ -32,7 +32,7 @@ public class QuestionService {
 
     public Question updateQuestion(Long id, Question question) {
         if (questionRepository.existsById(id)) {
-            question.setId(id);
+            question.setQuestionId(id);
             return questionRepository.save(question);
         } else {
             throw new RuntimeException("Question not found with id " + id);
