@@ -32,8 +32,18 @@ public class QuestionService {
 
     public Question updateQuestion(Long id, Question question) {
         if (questionRepository.existsById(id)) {
-            question.setQuestionId(id);
-            return questionRepository.save(question);
+            Question existingQuestion = questionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Question not found with id " + id));
+
+            existingQuestion.setQuestionText(question.getQuestionText());
+            existingQuestion.setOptionA(question.getOptionA());
+            existingQuestion.setOptionB(question.getOptionB());
+            existingQuestion.setOptionC(question.getOptionC());
+            existingQuestion.setOptionD(question.getOptionD());
+            existingQuestion.setCorrectOption(question.getCorrectOption());
+            existingQuestion.setSubject(question.getSubject());
+
+            return questionRepository.save(existingQuestion);
         } else {
             throw new RuntimeException("Question not found with id " + id);
         }

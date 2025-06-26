@@ -170,7 +170,9 @@ const AdminPage = () => {
                 optionD: newQuestion.options[3],
                 correctOption: newQuestion.correctAnswer,
                 subject: { subjectId: selectedSubjectId }
+                // Do not include responses to avoid overwriting
             };
+            console.log('Updating question with payload:', updatedPayload); // Debug log
             await updateQuestion(editingQuestionId, updatedPayload);
             await fetchQuestions(subjects);
             setNewQuestion({
@@ -183,6 +185,7 @@ const AdminPage = () => {
             setError(null);
         } catch (error) {
             const backendError = error.response?.data?.error || 'Failed to update question. Please try again.';
+            console.error('Update error:', error); // Debug log
             setError(backendError);
         }
     };

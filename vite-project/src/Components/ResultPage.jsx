@@ -12,7 +12,7 @@ const ResultPage = () => {
 
     const handleRestart = () => {
         localStorage.removeItem('selectedOptions');
-        navigate('/test');
+        navigate('/feedback');
     };
 
     return (
@@ -40,7 +40,7 @@ const ResultPage = () => {
                     onClick={handleRestart}
                     className="mt-6 bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700"
                 >
-                    Restart Test
+                    Another Feedback
                 </button>
             </div>
         </div>

@@ -1,7 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useTimer from '../hooks/useTimer2'; 
+import axios from 'axios'; // Added
+import { v4 as uuidv4 } from 'uuid'; // Added
 
 const InterestAptitudeTest = () => {
     const navigate = useNavigate();
@@ -16,6 +17,7 @@ const InterestAptitudeTest = () => {
     const { minutes, seconds, isTimeUp, resetTimer, startTimer } = useTimer(totalMinutes);
 
     const currentQuestion = questions[currentQuestionIndex] || {};
+
     useEffect(() => {
         const fetchQuestions = async () => {
             try {
@@ -24,10 +26,11 @@ const InterestAptitudeTest = () => {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const data = await response.json();
+                console.log('Fetched Questions:', data); // Added for debugging
 
                 const formattedQuestions = data.map((q) => ({
                     ...q,
-                    questionId: q.questionId || q.id, // fallback
+                    questionId: q.questionId || q.id,
                     questionText: q.questionText || q.text,
                     options: [q.optionA, q.optionB, q.optionC, q.optionD].filter(Boolean),
                     correctAnswer: q.correctOption || q.correctAnswer,
@@ -68,7 +71,7 @@ const InterestAptitudeTest = () => {
         const index = currentQuestion.options.indexOf(option);
         if (index === -1) return;
 
-        const optionLetter = String.fromCharCode(65 + index); 
+        const optionLetter = String.fromCharCode(65 + index);
         setSelectedOptions({
             ...selectedOptions,
             [currentQuestion.questionId]: optionLetter,
@@ -81,9 +84,35 @@ const InterestAptitudeTest = () => {
         }
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (isSubmitted) return;
 
+        setIsSubmitted(true);
+        const userId = localStorage.getItem('userId');
+        const testId = uuidv4();
+        console.log('Submitting Test - User ID:', userId, 'Test ID:', testId, 'Selected Options:', selectedOptions);
+
+        // Submit responses to backend
+        try {
+            for (const [questionId, selectedOption] of Object.entries(selectedOptions)) {
+                const payload = {
+                    user: { userId: parseInt(userId) },
+                    question: { questionId: parseInt(questionId) },
+                    selectedOption,
+                    testId
+                };
+                console.log('Sending Response Payload:', payload);
+                const response = await axios.post('http://localhost:7000/api/test/response', payload);
+                console.log('Response from Server:', response.data);
+            }
+        } catch (error) {
+            console.error('Error submitting responses:', error.response?.data || error.message);
+            setError('Failed to submit responses to server.');
+            setIsSubmitted(false); // Allow retry
+            return;
+        }
+
+        // Calculate score client-side
         let score = 0;
         let correctAnswers = 0;
 
@@ -94,7 +123,6 @@ const InterestAptitudeTest = () => {
             }
         });
 
-        setIsSubmitted(true);
         navigate('/result2', {
             state: {
                 questions,
@@ -176,8 +204,7 @@ const InterestAptitudeTest = () => {
                             {questions.map((_, i) => (
                                 <button
                                     key={i}
-                                    className={`p-2 rounded-full border ${currentQuestionIndex === i ? 'bg-blue-500 text-white' : 'bg-white'
-                                        }`}
+                                    className={`p-2 rounded-full border ${currentQuestionIndex === i ? 'bg-blue-500 text-white' : 'bg-white'}`}
                                     onClick={() => setCurrentQuestionIndex(i)}
                                     disabled={isSubmitted}
                                 >
