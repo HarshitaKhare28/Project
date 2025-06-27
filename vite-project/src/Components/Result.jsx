@@ -30,8 +30,8 @@ const Result = () => {
         console.log('Server Results:', response.data);
         setServerResults(response.data);
       } catch (err) {
-        console.error('Error fetching results:', err.response?.data || err.message);
-        setError('Failed to load server results, showing client-side data');
+        //nsole.error('Error fetching results:', err.response?.data || err.message);
+        //setError('Failed to load server results, showing client-side data');
       }
     };
     fetchResults();

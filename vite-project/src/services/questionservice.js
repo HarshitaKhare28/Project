@@ -13,6 +13,7 @@ const axiosInstance = axios.create({
 
 const getAllQuestions = () => axios.get(API_URL);
 const getQuestionById = (id) => axios.get(`${API_URL}/${id}`);
+
 const createQuestion = (question) => axios.post(API_URL, question);
 const updateQuestion = (id, question) =>
   axios.put(`${API_URL}/${id}`, question);

@@ -1,12 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useTimer from '../hooks/useTimer2'; 
-import axios from 'axios'; // Added
-import { v4 as uuidv4 } from 'uuid'; // Added
+import useTimer from '../hooks/useTimer2';
+import axios from 'axios';
+import { v4 as uuidv4 } from 'uuid';
 
 const InterestAptitudeTest = () => {
     const navigate = useNavigate();
-
     const [questions, setQuestions] = useState([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [selectedOptions, setSelectedOptions] = useState({});
@@ -15,18 +15,22 @@ const InterestAptitudeTest = () => {
     const [error, setError] = useState(null);
 
     const { minutes, seconds, isTimeUp, resetTimer, startTimer } = useTimer(totalMinutes);
-
     const currentQuestion = questions[currentQuestionIndex] || {};
 
     useEffect(() => {
         const fetchQuestions = async () => {
             try {
-                const response = await fetch('http://localhost:7000/api/questions');
-                if (!response.ok) {
+                const response = await axios.get('http://localhost:7000/api/questions', {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
+                if (!response.status === 200) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                const data = await response.json();
-                console.log('Fetched Questions:', data); // Added for debugging
+                const data = response.data;
+                console.log('Fetched Questions:', data);
 
                 const formattedQuestions = data.map((q) => ({
                     ...q,
@@ -46,12 +50,28 @@ const InterestAptitudeTest = () => {
                 const minutesFromStorage = storedTimer ? parseInt(storedTimer) : formattedQuestions.length;
                 setTotalMinutes(minutesFromStorage);
             } catch (error) {
-                console.error('Error fetching questions:', error);
+                console.error('Error fetching questions:', error.response?.data || error.message);
                 setError('Failed to load questions. Please try again.');
             }
         };
 
+        // Test endpoint to verify /api/test/response accessibility
+        const testEndpoint = async () => {
+            try {
+                const response = await axios.get('http://localhost:7000/api/test/response/test', {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
+                console.log('Test Endpoint Response:', response.data);
+            } catch (error) {
+                console.error('Test Endpoint Error:', error.response?.data || error.message);
+            }
+        };
+
         fetchQuestions();
+        testEndpoint();
     }, []);
 
     useEffect(() => {
@@ -92,7 +112,6 @@ const InterestAptitudeTest = () => {
         const testId = uuidv4();
         console.log('Submitting Test - User ID:', userId, 'Test ID:', testId, 'Selected Options:', selectedOptions);
 
-        // Submit responses to backend
         try {
             for (const [questionId, selectedOption] of Object.entries(selectedOptions)) {
                 const payload = {
@@ -101,18 +120,22 @@ const InterestAptitudeTest = () => {
                     selectedOption,
                     testId
                 };
-                console.log('Sending Response Payload:', payload);
-                const response = await axios.post('http://localhost:7000/api/test/response', payload);
+                console.log('Sending Response Payload:', JSON.stringify(payload, null, 2));
+                const response = await axios.post('http://localhost:7000/api/test/response', payload, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
                 console.log('Response from Server:', response.data);
             }
         } catch (error) {
             console.error('Error submitting responses:', error.response?.data || error.message);
-            setError('Failed to submit responses to server.');
-            setIsSubmitted(false); // Allow retry
+            setError(`Failed to submit responses to server: ${error.response?.data?.error || error.message}`);
+            setIsSubmitted(false);
             return;
         }
 
-        // Calculate score client-side
         let score = 0;
         let correctAnswers = 0;
 
@@ -130,6 +153,7 @@ const InterestAptitudeTest = () => {
                 score,
                 correctAnswers,
                 totalQuestions: questions.length,
+                testId
             },
         });
     };
