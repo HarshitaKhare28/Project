@@ -1,13 +1,31 @@
 package com.example.oaTest.Entity;
 
-import jakarta.persistence.*;
 import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 @Entity
 @Table(name = "questions")
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "questionId")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Question {
 
     @Id
@@ -16,6 +34,9 @@ public class Question {
 
     @Column(nullable = false, columnDefinition = "CLOB")
     private String questionText;
+
+    @Transient
+    private Double marks;
 
     private String optionA;
     private String optionB;
@@ -51,6 +72,13 @@ public class Question {
     private List<TestResponse> responses;
 
     public Long getQuestionId() { return questionId; }
+    public Double getMarks() {
+        return marks;
+    }
+    
+    public void setMarks(Double marks) {
+        this.marks = marks;
+    }
     public void setQuestionId(Long questionId) { this.questionId = questionId; }
     public String getQuestionText() { return questionText; }
     public void setQuestionText(String questionText) { this.questionText = questionText; }

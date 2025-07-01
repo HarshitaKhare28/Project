@@ -36,4 +36,50 @@ public class TestResponse {
 
     @Column(name = "test_id")
     private String testId;
+
+    public Long getResponseId() {
+        return responseId;
+    }
+    public void setResponseId(Long responseId) {
+        this.responseId = responseId;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public Question getQuestion() {
+        return question;
+    }
+
+    public void setQuestion(Question question) {
+        this.question = question;
+    }
+
+    public String getSelectedOption() {
+        return selectedOption;
+    }
+
+    public void setSelectedOption(String selectedOption) {
+        this.selectedOption = selectedOption;
+    }
+
+    public String getCorrectOption() {
+        return correctOption;
+    }
+
+    public void setCorrectOption(String correctOption) {
+        this.correctOption = correctOption;
+    }
+
+    public String getTestId() {
+        return testId;
+    }
+    public void setTestId(String testId) {
+        this.testId = testId;
+    }
 }

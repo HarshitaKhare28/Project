@@ -3,30 +3,33 @@ import {
     getAllQuestions,
     createQuestion,
     updateQuestion,
-    deleteQuestion
+    deleteQuestion,
 } from '../services/questionservice.js';
 import {
     getAllSubjects,
-    createSubject
+    createSubject,
+    updateSubject,
 } from '../services/subjectservice.js';
 
 const AdminPage = () => {
     const [questions, setQuestions] = useState([]);
     const [subjects, setSubjects] = useState([]);
-    const [selectedSubjectId, setSelectedSubjectId] = useState(() => {
-        return localStorage.getItem('lastSelectedSubjectId') || '';
-    });
+    const [selectedSubjectId, setSelectedSubjectId] = useState(() =>
+        localStorage.getItem('lastSelectedSubjectId') || ''
+    );
     const [newSubjectName, setNewSubjectName] = useState('');
+    const [newSubjectWeightage, setNewSubjectWeightage] = useState('');
+    const [editingSubjectId, setEditingSubjectId] = useState(null);
     const [newQuestion, setNewQuestion] = useState({
         text: '',
         options: ['', '', '', ''],
-        correctAnswer: '',
+        correctAnswer: ''
     });
     const [editMode, setEditMode] = useState(false);
     const [editingQuestionId, setEditingQuestionId] = useState(null);
-    const [timerDuration, setTimerDuration] = useState(() => {
-                return localStorage.getItem('testTimer') || 7; 
-            });
+    const [timerDuration, setTimerDuration] = useState(() =>
+        localStorage.getItem('testTimer') || 7
+    );
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -59,11 +62,14 @@ const AdminPage = () => {
     const fetchQuestions = async (loadedSubjects = subjects) => {
         try {
             const response = await getAllQuestions();
-            const questionsWithSubjects = response.data.map(q => {
-                const subjectObj = typeof q.subject === 'object' ? q.subject : loadedSubjects.find(s => s.subjectId === q.subject);
+            const questionsWithSubjects = response.data.map((q) => {
+                const subjectObj =
+                    typeof q.subject === 'object'
+                        ? q.subject
+                        : loadedSubjects.find((s) => s.subjectId === q.subject);
                 return {
                     ...q,
-                    subject: subjectObj || { subjectId: q.subject, name: 'N/A' }
+                    subject: subjectObj || { subjectId: q.subject, name: 'N/A' },
                 };
             });
             setQuestions(questionsWithSubjects);
@@ -84,26 +90,6 @@ const AdminPage = () => {
         setNewQuestion({ ...newQuestion, options });
     };
 
-    const handleAddSubject = async () => {
-        if (!newSubjectName.trim()) {
-            setError('Subject name cannot be empty');
-            return;
-        }
-
-        try {
-            const response = await createSubject({ name: newSubjectName });
-            const updatedSubjects = [...subjects, response.data];
-            setSubjects(updatedSubjects);
-            setSelectedSubjectId(response.data.subjectId);
-            localStorage.setItem('lastSelectedSubjectId', response.data.subjectId);
-            setNewSubjectName('');
-            setError(null);
-        } catch (error) {
-            console.error('Error creating subject:', error);
-            setError('Failed to create subject. Please try again.');
-        }
-    };
-
     const handleAddQuestion = async () => {
         if (!newQuestion.text.trim() || !selectedSubjectId) {
             setError('Question text and subject are required');
@@ -119,23 +105,17 @@ const AdminPage = () => {
                 correctOption: newQuestion.correctAnswer,
                 subject: { subjectId: selectedSubjectId }
             };
-            const response = await createQuestion(questionPayload);
-            if (response.status === 200||response.status ===201) {
-                console.log('Question added successfully');
-                await fetchQuestions(subjects);
-                setNewQuestion({
-                    text: '',
-                    options: ['', '', '', ''],
-                    correctAnswer: '',
-                });
-                setError(null);
-            } else {
-                throw new Error('Unexpected response from server');
-            }
+            await createQuestion(questionPayload);
+            await fetchQuestions(subjects);
+            setNewQuestion({
+                text: '',
+                options: ['', '', '', ''],
+                correctAnswer: ''
+            });
+            setError(null);
         } catch (error) {
             console.error('Error adding question:', error.response?.data || error.message);
             setError('Failed to add question. Please check logs or refresh.');
-            await fetchQuestions(subjects); // fallback
         }
     };
 
@@ -145,12 +125,9 @@ const AdminPage = () => {
             options: [question.optionA, question.optionB, question.optionC, question.optionD],
             correctAnswer: question.correctOption
         });
-        console.log("Selected Subject ID for update:", selectedSubjectId);
-        const subjectId = question.subject ? question.subject.subjectId : question.subject_id;
-        if (subjectId) {
-            setSelectedSubjectId(subjectId);
-            localStorage.setItem('lastSelectedSubjectId', subjectId);
-        }
+        const subjectId = question.subject.subjectId || question.subject_id;
+        setSelectedSubjectId(subjectId);
+        localStorage.setItem('lastSelectedSubjectId', subjectId);
         setEditingQuestionId(question.questionId);
         setEditMode(true);
         setError(null);
@@ -170,23 +147,20 @@ const AdminPage = () => {
                 optionD: newQuestion.options[3],
                 correctOption: newQuestion.correctAnswer,
                 subject: { subjectId: selectedSubjectId }
-                // Do not include responses to avoid overwriting
             };
-            console.log('Updating question with payload:', updatedPayload); // Debug log
             await updateQuestion(editingQuestionId, updatedPayload);
             await fetchQuestions(subjects);
             setNewQuestion({
                 text: '',
                 options: ['', '', '', ''],
-                correctAnswer: '',
+                correctAnswer: ''
             });
             setEditMode(false);
             setEditingQuestionId(null);
             setError(null);
         } catch (error) {
-            const backendError = error.response?.data?.error || 'Failed to update question. Please try again.';
-            console.error('Update error:', error); // Debug log
-            setError(backendError);
+            console.error('Error updating question:', error);
+            setError(error.response?.data?.error || 'Failed to update question');
         }
     };
 
@@ -202,24 +176,106 @@ const AdminPage = () => {
     };
 
     const saveTimerDuration = () => {
-            localStorage.setItem('testTimer', timerDuration);
-            alert("Timer duration saved successfully!");
-            };
+        localStorage.setItem('testTimer', timerDuration);
+        alert('Timer duration saved successfully!');
+    };
+
+    const handleEditSubject = (subject) => {
+        setEditingSubjectId(subject.subjectId);
+        setNewSubjectName(subject.name);
+        setNewSubjectWeightage(subject.weightage * 100); 
+        setError(null);
+    };
+    
+    const handleUpdateSubject = async () => {
+        if (!newSubjectName.trim()) {
+            setError('Subject name cannot be empty');
+            return;
+        }
+        const weightageNum = parseFloat(newSubjectWeightage);
+        if (isNaN(weightageNum) || weightageNum < 1 || weightageNum > 100 || !Number.isInteger(weightageNum)) {
+            setError('Weightage must be a whole number between 1 and 100');
+            return;
+        }
+        const totalWeightage = subjects.reduce(
+            (sum, subject) => sum + Math.round(subject.weightage * 100), 
+            0
+        ) - (subjects.find((s) => s.subjectId === editingSubjectId)?.weightage * 100 || 0) + weightageNum;
+        if (totalWeightage > 100) {
+            setError('Total weightage exceeds 100%');
+            return;
+        }
+        try {
+            console.log('Sending payload:', { name: newSubjectName, weightage: weightageNum });
+            const response = await updateSubject(editingSubjectId, {
+                name: newSubjectName,
+                weightage: weightageNum
+            });
+            console.log('Update response:', response.data);
+            const updatedSubjects = subjects.map((s) =>
+                s.subjectId === editingSubjectId ? { ...s, name: newSubjectName, weightage: response.data.weightage } : s
+            );
+            setSubjects(updatedSubjects);
+            setEditingSubjectId(null);
+            setNewSubjectName('');
+            setNewSubjectWeightage('');
+            setError(null);
+        } catch (error) {
+            console.error('Error updating subject:', error);
+            console.log('Error response:', error.response?.data);
+            setError(error.response?.data || 'Failed to update subject');
+        }
+    };
 
     const getSubjectName = (question) => {
         if (question.subject && typeof question.subject === 'object' && question.subject.name) {
-            return question.subject.name;
+            return `${question.subject.name} (${(question.subject.weightage * 100).toFixed(0)}%)`;
         }
-        const subjectId = typeof question.subject === 'object' ? question.subject?.subjectId : question.subject;
-        const subject = subjects.find(s => s.subjectId === subjectId);
-        return subject ? subject.name : 'N/A';
+        const subject = subjects.find((s) => s.subjectId === question.subject.subjectId);
+        return subject ? `${subject.name} (${(subject.weightage * 100).toFixed(0)}%)` : 'N/A';
+    };
+
+    const handleAddSubject = async () => {
+        if (!newSubjectName.trim()) {
+            setError('Subject name cannot be empty');
+            return;
+        }
+        const weightageNum = parseFloat(newSubjectWeightage) / 100; 
+        if (isNaN(weightageNum) || weightageNum <= 0 || weightageNum > 1) {
+            setError('Weightage must be a number between 0 and 100');
+            return;
+        }
+        const totalWeightage = subjects.reduce(
+            (sum, subject) => sum + (subject.weightage || 0),
+            0
+        ) + weightageNum;
+        if (totalWeightage > 1) {
+            setError('Total weightage exceeds 100%');
+            return;
+        }
+        try {
+            const response = await createSubject({
+                name: newSubjectName,
+                weightage: weightageNum,
+            });
+            const updatedSubjects = [...subjects, response.data];
+            setSubjects(updatedSubjects);
+            setSelectedSubjectId(response.data.subjectId);
+            localStorage.setItem('lastSelectedSubjectId', response.data.subjectId);
+            setNewSubjectName('');
+            setNewSubjectWeightage('');
+            setError(null);
+        } catch (error) {
+            console.error('Error creating subject:', error);
+            setError(error.response?.data || 'Failed to create subject');
+        }
     };
 
     const cancelEdit = () => {
         setNewQuestion({
             text: '',
             options: ['', '', '', ''],
-            correctAnswer: '',
+            correctAnswer: ''
         });
         setEditMode(false);
         setEditingQuestionId(null);
@@ -227,187 +283,214 @@ const AdminPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-            <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-6xl">
+        <div className="min-h-screen bg-gray-100 flex justify-center font-sans">
+            <div className="max-w-6xl w-full p-8 bg-white rounded-lg shadow-lg">
                 <h1 className="text-3xl font-bold text-blue-700 mb-6">Admin Page</h1>
-
                 {error && (
-                    <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
-                        {error}
-                    </div>
+                    <div className="bg-red-100 text-red-700 p-3 mb-6 rounded-lg">{error}</div>
                 )}
-
                 {loading ? (
                     <div className="text-center py-8">
-                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                        <p className="mt-2">Loading data...</p>
+                        <div className="animate-spin inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                        <p className="mt-2 text-gray-600">Loading...</p>
                     </div>
                 ) : (
                     <>
-                        {/* Subject creation */}
-                        <div className="mb-6">
-                            <h2 className="text-xl font-semibold text-blue-700 mb-2">Create New Subject</h2>
-                            <div className="flex space-x-4">
+                        {/* Subject management */}
+                        <div className="mb-8">
+                            <h2 className="text-xl font-semibold text-gray-800 mb-3">
+                                {editingSubjectId ? 'Edit Subject' : 'Add Subject'}
+                            </h2>
+                            <div className="flex space-x-3">
                                 <input
                                     type="text"
+                                    placeholder="Subject name"
                                     value={newSubjectName}
                                     onChange={(e) => setNewSubjectName(e.target.value)}
-                                    placeholder="Enter subject name"
-                                    className="w-full p-2 border rounded"
+                                    className="p-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                <input
+                                    type="number"
+                                    placeholder="Weightage (%)"
+                                    value={newSubjectWeightage}
+                                    onChange={(e) => setNewSubjectWeightage(e.target.value)}
+                                    className="p-2 border border-gray-300 rounded-lg w-28 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                                 <button
-                                    onClick={handleAddSubject}
-                                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                                    onClick={editingSubjectId ? handleUpdateSubject : handleAddSubject}
+                                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
                                 >
-                                    Add Subject
+                                    {editingSubjectId ? 'Update' : 'Add'}
+                                </button>
+                                {editingSubjectId && (
+                                    <button
+                                        onClick={() => {
+                                            setEditingSubjectId(null);
+                                            setNewSubjectName('');
+                                            setNewSubjectWeightage('');
+                                        }}
+                                        className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition"
+                                    >
+                                        Cancel
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                        {/* Subjects list */}
+                        <h2 className="text-xl font-semibold text-gray-800 mb-3">Subjects</h2>
+                        {subjects.map((s) => (
+                            <div
+                                key={s.subjectId}
+                                className="border border-gray-200 p-3 rounded-lg mb-3 flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition"
+                            >
+                                <span className="text-gray-700">{s.name} ({(s.weightage * 100).toFixed(0)}%)</span>
+                                <button
+                                    onClick={() => handleEditSubject(s)}
+                                    className="bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600 transition text-sm"
+                                >
+                                    Edit
+                                </button>
+                            </div>
+                        ))}
+                        {/* Timer */}
+                        <div className="mb-8">
+                            <h2 className="text-xl font-semibold text-gray-800 mb-3">Set Timer (minutes)</h2>
+                            <div className="flex space-x-3">
+                                <input
+                                    type="number"
+                                    value={timerDuration}
+                                    onChange={(e) => setTimerDuration(e.target.value)}
+                                    className="p-2 border border-gray-300 rounded-lg w-28 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                <button
+                                    onClick={saveTimerDuration}
+                                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                                >
+                                    Save Timer
                                 </button>
                             </div>
                         </div>
-
-                        {/* Question form */}
-                        <div className="mb-6">
-                            <h2 className="text-2xl font-bold text-blue-700 mb-4">Add/Edit Question</h2>
-                            <div className="space-y-4">
-                                <select
-                                    value={selectedSubjectId}
-                                    onChange={(e) => {
-                                        const newSubjectId = e.target.value;
-                                        setSelectedSubjectId(newSubjectId);
-                                        localStorage.setItem('lastSelectedSubjectId', newSubjectId);
-                                    }}
-                                    className="w-full p-2 border rounded"
-                                    disabled={subjects.length === 0}
-                                >
-                                    {subjects.length === 0 ? (
-                                        <option value="">No subjects available</option>
-                                    ) : (
-                                        subjects.map((subj) => (
-                                            <option key={subj.subjectId} value={subj.subjectId}>
-                                                {subj.name}
-                                            </option>
-                                        ))
-                                    )}
-                                </select>
-                                <input
-                                    type="text"
-                                    name="text"
-                                    value={newQuestion.text}
-                                    onChange={handleInputChange}
-                                    placeholder="Question text"
-                                    className="w-full p-2 border rounded"
-                                />
-                                {newQuestion.options.map((option, index) => (
-                                    <input
-                                        key={index}
-                                        type="text"
-                                        value={option}
-                                        onChange={(e) => handleOptionChange(index, e.target.value)}
-                                        placeholder={`Option ${String.fromCharCode(65 + index)}`}
-                                        className="w-full p-2 border rounded"
-                                    />
+                        {/* Add/Edit Question */}
+                        <div className="mb-8">
+                            <h2 className="text-xl font-semibold text-gray-800 mb-3">
+                                {editMode ? 'Edit Question' : 'Add Question'}
+                            </h2>
+                            <select
+                                value={selectedSubjectId}
+                                onChange={(e) => setSelectedSubjectId(e.target.value)}
+                                className="p-2 border border-gray-300 rounded-lg mb-3 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">Select Subject</option>
+                                {subjects.map((s) => (
+                                    <option key={s.subjectId} value={s.subjectId}>
+                                        {s.name} ({(s.weightage * 100).toFixed(0)}%)
+                                    </option>
                                 ))}
-                                <select
-                                    name="correctAnswer"
-                                    value={newQuestion.correctAnswer}
-                                    onChange={handleInputChange}
-                                    className="w-full p-2 border rounded"
+                            </select>
+                            <input
+                                type="text"
+                                name="text"
+                                placeholder="Question text"
+                                value={newQuestion.text}
+                                onChange={handleInputChange}
+                                className="p-2 border border-gray-300 rounded-lg w-full mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            {newQuestion.options.map((opt, i) => (
+                                <input
+                                    key={i}
+                                    type="text"
+                                    placeholder={`Option ${String.fromCharCode(65 + i)}`}
+                                    value={opt}
+                                    onChange={(e) => handleOptionChange(i, e.target.value)}
+                                    className="p-2 border border-gray-300 rounded-lg w-full mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            ))}
+                            <select
+                                name="correctAnswer"
+                                value={newQuestion.correctAnswer}
+                                onChange={handleInputChange}
+                                className="p-2 border border-gray-300 rounded-lg mb-3 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">Select correct answer</option>
+                                {newQuestion.options.map((_, i) => (
+                                    <option key={i} value={String.fromCharCode(65 + i)}>
+                                        {String.fromCharCode(65 + i)}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="flex space-x-3">
+                                <button
+                                    onClick={editMode ? handleUpdateQuestion : handleAddQuestion}
+                                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
                                 >
-                                    <option value="">Select correct answer</option>
-                                    {newQuestion.options.map((_, index) => (
-                                        <option key={index} value={String.fromCharCode(65 + index)}>
-                                            {String.fromCharCode(65 + index)}
-                                        </option>
-                                    ))}
-                                </select>
-                                <div className="flex space-x-4">
+                                    {editMode ? 'Update' : 'Add'}
+                                </button>
+                                {editMode && (
                                     <button
-                                        onClick={editMode ? handleUpdateQuestion : handleAddQuestion}
-                                        disabled={subjects.length === 0}
-                                        className={`py-2 px-4 rounded ${subjects.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
+                                        onClick={() => {
+                                            setEditMode(false);
+                                            setEditingQuestionId(null);
+                                            setNewQuestion({ text: '', options: ['', '', '', ''], correctAnswer: '' });
+                                        }}
+                                        className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition"
                                     >
-                                        {editMode ? 'Update Question' : 'Add Question'}
+                                        Cancel
                                     </button>
-                                    {editMode && (
-                                        <button
-                                            onClick={cancelEdit}
-                                            className="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700"
-                                        >
-                                            Cancel
-                                        </button>
-                                    )}
-                                </div>
+                                )}
                             </div>
                         </div>
-
-                        {/* Timer input */}
-                        <div className="mt-8 mb-6">
-                            <h2 className="text-xl font-semibold text-blue-700 mb-2">Set Test Timer Duration (in minutes)</h2>
-                        <div className="flex items-center space-x-4">
-                        <input
-                            type="number"
-                            value={timerDuration}
-                            onChange={(e) => setTimerDuration(e.target.value)}
-                            className="border rounded p-2 w-24"
-                            min="1"
-                        />
-                        <button
-                            onClick={saveTimerDuration}
-                            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                            Save Timer
-                        </button>
-                        </div>
-                        </div>
-
                         {/* Questions list */}
-                        <div>
-                            <h2 className="text-2xl font-bold text-blue-700 mb-4">Questions List</h2>
-                            {questions.length === 0 ? (
-                                <p className="text-gray-500">No questions available</p>
-                            ) : (
-                                <div className="space-y-4">
-                                    {questions.map((question, index) => (
-                                        <div key={question.questionId} className="bg-gray-50 p-4 rounded-lg shadow">
-                                            <p className="font-bold">{index + 1}. {question.questionText}</p>
-                                            <ul className="ml-4 mt-2 list-disc">
-                                                <li className={question.correctOption === 'A' ? 'text-green-600 font-medium' : ''}>
-                                                    A: {question.optionA}
-                                                </li>
-                                                <li className={question.correctOption === 'B' ? 'text-green-600 font-medium' : ''}>
-                                                    B: {question.optionB}
-                                                </li>
-                                                <li className={question.correctOption === 'C' ? 'text-green-600 font-medium' : ''}>
-                                                    C: {question.optionC}
-                                                </li>
-                                                <li className={question.correctOption === 'D' ? 'text-green-600 font-medium' : ''}>
-                                                    D: {question.optionD}
-                                                </li>
-                                            </ul>
-                                            <div className="mt-2 flex justify-between items-center">
-                                                <div>
-                                                    <span className="text-sm text-gray-500">
-                                                        Subject: {getSubjectName(question)}
-                                                    </span>
-                                                </div>
-                                                <div className="flex space-x-2">
-                                                    <button
-                                                        onClick={() => handleEditQuestion(question)}
-                                                        className="bg-blue-600 text-white py-1 px-3 rounded hover:bg-blue-700 text-sm"
-                                                    >
-                                                        Edit
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteQuestion(question.questionId)}
-                                                        className="bg-red-600 text-white py-1 px-3 rounded hover:bg-red-700 text-sm"
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
+                        <h2 className="text-xl font-semibold text-gray-800 mb-3">Questions</h2>
+                        {questions.map((q, idx) => (
+                            <div
+                                key={q.questionId}
+                                className="border border-gray-300 p-4 rounded-lg mb-4 bg-gray-50 shadow-sm hover:shadow-md transition"
+                            >
+                                <p className="font-semibold text-lg text-gray-900 mb-2">
+                                    {idx + 1}. {q.questionText}
+                                </p>
+                                <p className="text-sm text-gray-600 mb-2">Marks: {q.marks}</p>
+                                <ul className="ml-4 space-y-1 text-gray-700">
+                                    {q.optionA && (
+                                        <li className="text-sm">
+                                            A: {q.optionA} {q.correctOption === 'A' && <span className="text-green-600 font-medium">corr</span>}
+                                        </li>
+                                    )}
+                                    {q.optionB && (
+                                        <li className="text-sm">
+                                            B: {q.optionB} {q.correctOption === 'B' && <span className="text-green-600 font-medium">corr</span>}
+                                        </li>
+                                    )}
+                                    {q.optionC && (
+                                        <li className="text-sm">
+                                            C: {q.optionC} {q.correctOption === 'C' && <span className="text-green-600 font-medium">corr</span>}
+                                        </li>
+                                    )}
+                                    {q.optionD && (
+                                        <li className="text-sm">
+                                            D: {q.optionD} {q.correctOption === 'D' && <span className="text-green-600 font-medium">corr</span>}
+                                        </li>
+                                    )}
+                                </ul>
+                                <p className="text-sm text-gray-500 mt-2">
+                                    Correct: {q.correctOption} | Subject: {getSubjectName(q)}
+                                </p>
+                                <div className="flex space-x-3 mt-3">
+                                    <button
+                                        onClick={() => handleEditQuestion(q)}
+                                        className="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition text-sm"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeleteQuestion(q.questionId)}
+                                        className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
+                                    >
+                                        Delete
+                                    </button>
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        ))}
                     </>
                 )}
             </div>

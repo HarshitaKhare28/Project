@@ -2,15 +2,23 @@ package com.example.oaTest.Controller;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.example.oaTest.Entity.Question;
 import com.example.oaTest.Repository.QuestionRepository;
+import com.example.oaTest.service.QuestionService;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -22,6 +30,8 @@ public class QuestionController {
     @Autowired
     private QuestionRepository questionRepository;
 
+    @Autowired
+    private QuestionService questionService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -35,7 +45,7 @@ public class QuestionController {
                 return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Subject is required"));
             }
             Question savedQuestion = questionRepository.save(question);
-            //entityManager.refresh(savedQuestion);
+            // entityManager.refresh(savedQuestion);
             System.out.println("Saved question with subject: " + savedQuestion.getSubject());
             return ResponseEntity.ok(savedQuestion);
         } catch (Exception e) {
@@ -50,16 +60,11 @@ public class QuestionController {
     public ResponseEntity<List<Question>> getAllQuestions() {
         try {
             List<Question> questions = questionRepository.findAllWithSubjects();
-            questions.forEach(q -> {
-                if (q.getSubject() != null) {
-                    System.out.println("Question: " + q.getQuestionText() + ", Subject: " + q.getSubject().getName());
-                } else {
-                    System.out.println("Question: " + q.getQuestionText() + ", Subject is null");
-                }
-            });
-            return ResponseEntity.ok(questions.stream().collect(Collectors.toList()));
+            questionService.computeMarksForQuestions(questions);
+
+            return ResponseEntity.ok(questions);
         } catch (Exception e) {
-            System.out.println("Error in getAllQuestions: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
