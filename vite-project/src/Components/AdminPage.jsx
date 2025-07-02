@@ -9,6 +9,7 @@ import {
     getAllSubjects,
     createSubject,
     updateSubject,
+    deleteSubject,
 } from '../services/subjectservice.js';
 
 const AdminPage = () => {
@@ -240,9 +241,9 @@ const AdminPage = () => {
             setError('Subject name cannot be empty');
             return;
         }
-        const weightageNum = parseFloat(newSubjectWeightage) / 100; 
+        const weightageNum = parseFloat(newSubjectWeightage) / 100; // Convert to 0–1 range
         if (isNaN(weightageNum) || weightageNum <= 0 || weightageNum > 1) {
-            setError('Weightage must be a number between 0 and 100');
+            setError('Weightage must be a number between 1 and 100');
             return;
         }
         const totalWeightage = subjects.reduce(
@@ -254,10 +255,13 @@ const AdminPage = () => {
             return;
         }
         try {
-            const response = await createSubject({
+            const payload = {
                 name: newSubjectName,
-                weightage: weightageNum,
-            });
+                weightage: parseFloat(newSubjectWeightage), // Send as percentage (1–100)
+            };
+            console.log('Sending payload to createSubject:', payload); // Log payload
+            const response = await createSubject(payload);
+            console.log('Create subject response:', response.data); // Log response
             const updatedSubjects = [...subjects, response.data];
             setSubjects(updatedSubjects);
             setSelectedSubjectId(response.data.subjectId);
@@ -267,10 +271,35 @@ const AdminPage = () => {
             setError(null);
         } catch (error) {
             console.error('Error creating subject:', error);
+            console.log('Backend error response:', error.response?.data); // Log backend error
             setError(error.response?.data || 'Failed to create subject');
         }
     };
-
+    const handleDeleteSubject = async (subjectId) => {
+        try {
+            if (!window.confirm('Are you sure you want to delete this subject?')) {
+                return;
+            }
+            const hasQuestions = questions.some(q => q.subject.subjectId === subjectId);
+            if (hasQuestions) {
+                setError('Cannot delete subject with associated questions');
+                return;
+            }
+            await deleteSubject(subjectId);
+            const updatedSubjects = subjects.filter((s) => s.subjectId !== subjectId);
+            setSubjects(updatedSubjects);
+            if (selectedSubjectId === subjectId) {
+                const newSelectedId = updatedSubjects.length > 0 ? updatedSubjects[0].subjectId : '';
+                setSelectedSubjectId(newSelectedId);
+                localStorage.setItem('lastSelectedSubjectId', newSelectedId);
+            }
+            await fetchQuestions(updatedSubjects);
+            setError(null);
+        } catch (error) {
+            console.error('Error deleting subject:', error);
+            setError(error.response?.data?.error || 'Failed to delete subject');
+        }
+    };
     const cancelEdit = () => {
         setNewQuestion({
             text: '',
@@ -344,12 +373,20 @@ const AdminPage = () => {
                                 className="border border-gray-200 p-3 rounded-lg mb-3 flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition"
                             >
                                 <span className="text-gray-700">{s.name} ({(s.weightage * 100).toFixed(0)}%)</span>
-                                <button
-                                    onClick={() => handleEditSubject(s)}
-                                    className="bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600 transition text-sm"
-                                >
-                                    Edit
-                                </button>
+                                <div className="flex space-x-2">
+                                    <button
+                                        onClick={() => handleEditSubject(s)}
+                                        className="bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600 transition text-sm"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeleteSubject(s.subjectId)}
+                                        className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition text-sm"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
                             </div>
                         ))}
                         {/* Timer */}
@@ -449,7 +486,8 @@ const AdminPage = () => {
                                 <p className="font-semibold text-lg text-gray-900 mb-2">
                                     {idx + 1}. {q.questionText}
                                 </p>
-                                <p className="text-sm text-gray-600 mb-2">Marks: {q.marks}</p>
+                                <p className="text-sm text-gray-600 mb-2">Mark
+                                    s: {q.marks*100}</p>
                                 <ul className="ml-4 space-y-1 text-gray-700">
                                     {q.optionA && (
                                         <li className="text-sm">

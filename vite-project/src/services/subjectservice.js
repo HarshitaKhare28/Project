@@ -23,3 +23,16 @@ export const updateSubject = (subjectId, subject) => {
             throw error;
         });
 };
+
+export const deleteSubject = (subjectId) => {
+    console.log('Deleting subject ID:', subjectId);
+    return axios.delete(`${API_URL}/${subjectId}`)
+        .then(response => {
+            console.log('Delete response:', response.data);
+            return response;
+        })
+        .catch(error => {
+            console.error('Delete error:', error.response?.data || error.message);
+            throw error;
+        });
+};
